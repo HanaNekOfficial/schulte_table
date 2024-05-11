@@ -1,25 +1,27 @@
 // Written by HanaNeko
 
+#include <algorithm>
 #include <cassert>
 #include <graphics.h>
 #include <random>
-#include <algorithm>
 
 const int FPS = 60;
 
-enum SurfaceMode {mainMenu, selectMode, inGame, gameOver};
+enum SurfaceMode { mainMenu, selectMode, inGame, gameOver };
 SurfaceMode surfaceMode = selectMode;
 
-enum GameStat {lose, win};
+enum GameStat { lose, win };
 GameStat gameStat = lose;
 
-int tableSize = 4;  // size of table (4, 5, 6)
-int grid[8][8];  // table of numbers
-int targetNumber = 0;  // the number need to be found currently
+int tableSize = 4;    // size of table (4, 5, 6)
+int grid[8][8];       // table of numbers
+int targetNumber = 0; // the number need to be found currently
 
 bool mouseInRectangle(const RECT rect, ExMessage msg) {
-    if (msg.x < rect.left || msg.x > rect.right) return false;
-    if (msg.y < rect.top || msg.y > rect.bottom) return false;
+    if (msg.x < rect.left || msg.x > rect.right)
+        return false;
+    if (msg.y < rect.top || msg.y > rect.bottom)
+        return false;
     return true;
 }
 
@@ -34,7 +36,7 @@ void createGrid() {
     std::mt19937 rng(rd());
 
     std::shuffle(num, num + tableSize * tableSize, rng);
-    
+
     for (int i = 0; i < tableSize * tableSize; i++) {
         grid[i / tableSize][i % tableSize] = num[i];
     }
@@ -89,7 +91,8 @@ void surface1() {
     f.lfQuality = ANTIALIASED_QUALITY;
     settextstyle(&f);
 
-    drawtext(_T("Select mode:"), &rect_selectMode, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    drawtext(_T("Select mode:"), &rect_selectMode,
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     drawtext(_T("4x4"), &rect_4x4, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     drawtext(_T("5x5"), &rect_5x5, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     drawtext(_T("6x6"), &rect_6x6, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
@@ -106,10 +109,12 @@ void surface2() {
 
     for (int i = 0; i <= tableSize; i++) {
         for (int j = 0; j <= tableSize; j++) {
-            rect_grid[i][j] = {100 + 600 / tableSize * i, 60 + 600 / tableSize * j, 100 + 600 / tableSize * (i + 1), 60 + 600 / tableSize * (j + 1)};
+            rect_grid[i][j] = {100 + 600 / tableSize * i,
+                               60 + 600 / tableSize * j,
+                               100 + 600 / tableSize * (i + 1),
+                               60 + 600 / tableSize * (j + 1)};
         }
     }
-
 
     ExMessage msg;
 
@@ -121,21 +126,22 @@ void surface2() {
                     if (mouseInRectangle(rect_grid[i][j], msg)) {
                         if (grid[i][j] == targetNumber) {
                             targetNumber++;
-                        } else {  // Wrong number, player loses
+                        } else { // Wrong number, player loses
                             surfaceMode = gameOver;
                             gameStat = lose;
                         }
                     }
                 }
             }
-            
         }
     }
 
     // draw grids
     for (int i = 0; i <= tableSize; i++) {
-        line(100 + 600 / tableSize * i, 60, 100 + 600 / tableSize * i, 660);  // vertical lines
-        line(100, 60 + 600 / tableSize * i, 700, 60 + 600 / tableSize * i);   // horizontal lines
+        line(100 + 600 / tableSize * i, 60, 100 + 600 / tableSize * i,
+             660); // vertical lines
+        line(100, 60 + 600 / tableSize * i, 700,
+             60 + 600 / tableSize * i); // horizontal lines
     }
 
     // draw Numbers
@@ -154,7 +160,8 @@ void surface2() {
                 settextcolor(0x00FFFFFF); // white
             }
 
-            drawtext(std::to_string(num).c_str(), &rect_grid[i][j], DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            drawtext(std::to_string(num).c_str(), &rect_grid[i][j],
+                     DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         }
     }
     settextcolor(0x00FFFFFF);
@@ -164,7 +171,6 @@ void surface2() {
         surfaceMode = gameOver;
         gameStat = win;
     }
-
 }
 
 // game over
@@ -175,20 +181,24 @@ void surface3() {
 
     for (int i = 0; i < tableSize; i++) {
         for (int j = 0; j < tableSize; j++) {
-            rect_grid[i][j] = {100 + 600 / tableSize * i, 60 + 600 / tableSize * j, 100 + 600 / tableSize * (i + 1), 60 + 600 / tableSize * (j + 1)};
+            rect_grid[i][j] = {100 + 600 / tableSize * i,
+                               60 + 600 / tableSize * j,
+                               100 + 600 / tableSize * (i + 1),
+                               60 + 600 / tableSize * (j + 1)};
         }
     }
 
     ExMessage msg;
 
     while (peekmessage(&msg)) {
-        
     }
 
     // draw grids
     for (int i = 0; i <= tableSize; i++) {
-        line(100 + 600 / tableSize * i, 60, 100 + 600 / tableSize * i, 660);  // vertical lines
-        line(100, 60 + 600 / tableSize * i, 700, 60 + 600 / tableSize * i);   // horizontal lines
+        line(100 + 600 / tableSize * i, 60, 100 + 600 / tableSize * i,
+             660); // vertical lines
+        line(100, 60 + 600 / tableSize * i, 700,
+             60 + 600 / tableSize * i); // horizontal lines
     }
 
     // draw Numbers
@@ -206,7 +216,8 @@ void surface3() {
             } else {
                 settextcolor(0x00FFFFFF); // white
             }
-            drawtext(std::to_string(num).c_str(), &rect_grid[i][j], DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            drawtext(std::to_string(num).c_str(), &rect_grid[i][j],
+                     DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         }
     }
     settextcolor(0x00FFFFFF);
@@ -215,9 +226,11 @@ void surface3() {
     f.lfHeight = 96;
     settextstyle(&f);
     if (gameStat == win)
-        drawtext(_T("You win!"), &rect_result, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        drawtext(_T("You win!"), &rect_result,
+                 DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     else if (gameStat == lose)
-        drawtext(_T("You lose!"), &rect_result, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        drawtext(_T("You lose!"), &rect_result,
+                 DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
 int main() {
@@ -231,14 +244,17 @@ int main() {
         cleardevice();
 
         switch (surfaceMode) {
-            case mainMenu:
-                break;
-            case selectMode:
-                surface1(); break;
-            case inGame:
-                surface2(); break;
-            case gameOver:
-                surface3(); break;
+        case mainMenu:
+            break;
+        case selectMode:
+            surface1();
+            break;
+        case inGame:
+            surface2();
+            break;
+        case gameOver:
+            surface3();
+            break;
         }
 
         FlushBatchDraw();
