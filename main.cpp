@@ -16,6 +16,14 @@ GameStat gameStat = lose;
 int tableSize = 4;    // size of table (4, 5, 6)
 int grid[8][8];       // table of numbers
 int targetNumber = 0; // the number need to be found currently
+int wrongNum;         // the number player found incorrectly
+bool useHint;         // player requires a hint
+bool usedHint;        // player used hint(s) in current game
+bool hintText;
+DWORD gameStartTime;
+DWORD gameNowTime;
+DWORD gameLastTime;
+DWORD gameEndTime;
 
 bool mouseInRectangle(const RECT rect, ExMessage msg) {
     if (msg.x < rect.left || msg.x > rect.right)
@@ -42,6 +50,10 @@ void createGrid() {
     }
 
     targetNumber = 1;
+    gameLastTime = gameStartTime = GetTickCount();
+    useHint = false;
+    usedHint = false;
+    hintText = false;
 }
 
 // select mode
@@ -106,6 +118,10 @@ void surface1() {
 void surface2() {
     // 100, 60, 700, 660
     RECT rect_grid[8][8];
+    RECT rect_retry = {825, 440, 1175, 540};
+    RECT rect_mainMenu = {825, 560, 1175, 660};
+    RECT rect_time = {850, 200, 1150, 400};
+    RECT rect_hint = {100, 660, 700, 700};
 
     for (int i = 0; i <= tableSize; i++) {
         for (int j = 0; j <= tableSize; j++) {
@@ -126,12 +142,38 @@ void surface2() {
                     if (mouseInRectangle(rect_grid[i][j], msg)) {
                         if (grid[i][j] == targetNumber) {
                             targetNumber++;
-                        } else { // Wrong number, player loses
+                            useHint = false;
+                            gameLastTime = GetTickCount();
+                        } else if (grid[i][j] >
+                                   targetNumber) { // Wrong number, player loses
                             surfaceMode = gameOver;
                             gameStat = lose;
+                            wrongNum = grid[i][j];
+                            gameEndTime = GetTickCount();
                         }
                     }
                 }
+            }
+
+            if (mouseInRectangle(rect_retry, msg)) {
+                surfaceMode = inGame;
+                createGrid();
+            }
+            if (mouseInRectangle(rect_mainMenu, msg)) {
+                surfaceMode = mainMenu;
+            }
+        }
+
+        if (msg.message == WM_KEYDOWN) {
+            if (msg.vkcode == 0x52) { // R
+                surfaceMode = inGame;
+                createGrid();
+            }
+            if (msg.vkcode == 0x4D) { // M
+                surfaceMode = mainMenu;
+            }
+            if (msg.vkcode == 0x48) { // H
+                usedHint = useHint = true;
             }
         }
     }
@@ -144,8 +186,23 @@ void surface2() {
              60 + 600 / tableSize * i); // horizontal lines
     }
 
-    // draw Numbers
+    // draw time
     LOGFONT f;
+    gettextstyle(&f);
+    f.lfHeight = 96;
+    settextstyle(&f);
+    gameNowTime = GetTickCount();
+    DWORD gamePassTime = gameNowTime - gameStartTime;
+    std::string str = std::to_string(gamePassTime / 1000) + '.' +
+                      (gamePassTime % 100 < 10 ? "0" : "") +
+                      std::to_string(gamePassTime % 100) + 's';
+    if (usedHint)
+        settextcolor(0x0000FFFF); // yellow
+    else
+        settextcolor(0x00FFFFFF);
+    drawtext(str.c_str(), &rect_time, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    // draw Numbers
     gettextstyle(&f);
     f.lfHeight = 64 * 6 / tableSize;
     _tcscpy(f.lfFaceName, _T("Consolas"));
@@ -156,6 +213,8 @@ void surface2() {
             auto num = grid[i][j];
             if (num < targetNumber) {
                 settextcolor(0x0032CD32); // lime green
+            } else if (num == targetNumber && useHint) {
+                settextcolor(0x0000FFFF); // yellow
             } else {
                 settextcolor(0x00FFFFFF); // white
             }
@@ -166,10 +225,31 @@ void surface2() {
     }
     settextcolor(0x00FFFFFF);
 
+    // draw buttons
+    rectangle(825, 440, 1175, 540);
+    rectangle(825, 560, 1175, 660);
+    f.lfHeight = 48;
+    settextstyle(&f);
+    drawtext(_T("Retry (R)"), &rect_retry,
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    drawtext(_T("Main Menu (M)"), &rect_mainMenu,
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    // draw hint text
+    if (hintText || gameNowTime - gameLastTime > 1500 * tableSize) {
+        f.lfHeight = 32;
+        settextstyle(&f);
+        settextcolor(0x00FFFFFF);
+        drawtext(_T("Press H to get a hint"), &rect_hint,
+                 DT_VCENTER | DT_SINGLELINE);
+        hintText = true;
+    }
+
     // All numbers found, player wins
     if (targetNumber > tableSize * tableSize) {
         surfaceMode = gameOver;
         gameStat = win;
+        gameEndTime = GetTickCount();
     }
 }
 
@@ -178,6 +258,10 @@ void surface3() {
     // 100, 60, 700, 660
     RECT rect_grid[8][8];
     RECT rect_result = {800, 60, 1200, 150};
+    RECT rect_retry = {825, 440, 1175, 540};
+    RECT rect_mainMenu = {825, 560, 1175, 660};
+    RECT rect_time = {850, 200, 1150, 400};
+    RECT rect_hint = {100, 660, 700, 700};
 
     for (int i = 0; i < tableSize; i++) {
         for (int j = 0; j < tableSize; j++) {
@@ -191,6 +275,25 @@ void surface3() {
     ExMessage msg;
 
     while (peekmessage(&msg)) {
+        if (msg.message == WM_LBUTTONDOWN) {
+            if (mouseInRectangle(rect_retry, msg)) {
+                surfaceMode = inGame;
+                createGrid();
+            }
+            if (mouseInRectangle(rect_mainMenu, msg)) {
+                surfaceMode = mainMenu;
+            }
+        }
+
+        if (msg.message == WM_KEYDOWN) {
+            if (msg.vkcode == 0x52) { // R
+                surfaceMode = inGame;
+                createGrid();
+            }
+            if (msg.vkcode == 0x4D) { // M
+                surfaceMode = mainMenu;
+            }
+        }
     }
 
     // draw grids
@@ -213,6 +316,8 @@ void surface3() {
             auto num = grid[i][j];
             if (num < targetNumber) {
                 settextcolor(0x0032CD32); // lime green
+            } else if (num == wrongNum) {
+                settextcolor(0x00000FF); // red
             } else {
                 settextcolor(0x00FFFFFF); // white
             }
@@ -225,16 +330,63 @@ void surface3() {
     // draw result
     f.lfHeight = 96;
     settextstyle(&f);
-    if (gameStat == win)
-        drawtext(_T("You win!"), &rect_result,
+    if (gameStat == win) {
+        if (usedHint) {
+            settextcolor(0x0000FFFF); // yellow
+            drawtext(_T("You won?"), &rect_result,
+                     DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        } else {
+            settextcolor(0x0032CD32); // lime green
+            drawtext(_T("You won!"), &rect_result,
+                     DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        }
+    } else if (gameStat == lose) {
+        settextcolor(0x00000FF); // red
+        drawtext(_T("You lost!"), &rect_result,
                  DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-    else if (gameStat == lose)
-        drawtext(_T("You lose!"), &rect_result,
-                 DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    }
+    settextcolor(0x00FFFFFF);
+
+    // draw buttons
+    rectangle(825, 440, 1175, 540);
+    rectangle(825, 560, 1175, 660);
+    f.lfHeight = 48;
+    settextstyle(&f);
+    drawtext(_T("Retry (R)"), &rect_retry,
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    drawtext(_T("Main Menu (M)"), &rect_mainMenu,
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    // draw time
+    f.lfHeight = 96;
+    settextstyle(&f);
+    DWORD gamePassTime = gameEndTime - gameStartTime;
+    if (surfaceMode != gameOver)
+        gamePassTime = 0;
+    std::string str = std::to_string(gamePassTime / 1000) + '.' +
+                      (gamePassTime % 100 < 10 ? "0" : "") +
+                      std::to_string(gamePassTime % 100) + 's';
+    if (usedHint)
+        settextcolor(0x0000FFFF); // yellow
+    else
+        settextcolor(0x00FFFFFF);
+    drawtext(str.c_str(), &rect_time, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    // draw hint text
+    if (hintText) {
+        f.lfHeight = 32;
+        settextstyle(&f);
+        settextcolor(0x00FFFFFF);
+        drawtext(_T("Press H to get a hint"), &rect_hint,
+                 DT_VCENTER | DT_SINGLELINE);
+    }
 }
 
 int main() {
     initgraph(1280, 720);
+
+    HWND hWnd = GetHWnd();
+    SetWindowText(hWnd, _T("Schulte Table"));
 
     BeginBatchDraw();
 
@@ -245,7 +397,7 @@ int main() {
 
         switch (surfaceMode) {
         case mainMenu:
-            break;
+
         case selectMode:
             surface1();
             break;
