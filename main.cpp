@@ -8,7 +8,7 @@
 const int FPS = 60;
 
 enum SurfaceMode { mainMenu, selectMode, inGame, gameOver };
-SurfaceMode surfaceMode = selectMode;
+SurfaceMode surfaceMode = mainMenu;
 
 enum GameStat { lose, win };
 GameStat gameStat = lose;
@@ -56,6 +56,51 @@ void createGrid() {
     hintText = false;
 }
 
+// main menu
+void surface0() {
+    RECT rect_title = {0, 150, 1280, 250};
+    RECT rect_start = {440, 360, 840, 460};
+    RECT rect_exit = {440, 500, 840, 600};
+    RECT rect_author = {20, 660, 1280, 720};
+
+    ExMessage msg;
+
+    while (peekmessage(&msg)) {
+        if (msg.message == WM_LBUTTONDOWN) {
+            if (mouseInRectangle(rect_start, msg)) {
+                surfaceMode = selectMode;
+            }
+            if (mouseInRectangle(rect_exit, msg)) {
+                exit(0);
+            }
+        }
+    }
+
+    // draw title
+    LOGFONT f;
+    gettextstyle(&f);
+    f.lfHeight = 96;
+    _tcscpy(f.lfFaceName, _T("Consolas"));
+    f.lfQuality = ANTIALIASED_QUALITY;
+    settextstyle(&f);
+    drawtext(_T("SCHULTE TABLE"), &rect_title,
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    // draw buttons
+    rectangle(440, 360, 840, 460);
+    rectangle(440, 500, 840, 600);
+    f.lfHeight = 48;
+    settextstyle(&f);
+    drawtext(_T("Start"), &rect_start, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    drawtext(_T("Exit"), &rect_exit, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    // draw author
+    f.lfHeight = 24;
+    settextstyle(&f);
+    drawtext(_T("Copyright 2024 by HanaNekOfficial"), &rect_author,
+             DT_VCENTER | DT_SINGLELINE);
+}
+
 // select mode
 void surface1() {
     RECT rect_selectMode = {0, 210, 1280, 310};
@@ -88,8 +133,6 @@ void surface1() {
             }
         }
     }
-
-    cleardevice();
 
     rectangle(290, 360, 490, 560);
     rectangle(540, 360, 740, 560);
@@ -397,7 +440,8 @@ int main() {
 
         switch (surfaceMode) {
         case mainMenu:
-
+            surface0();
+            break;
         case selectMode:
             surface1();
             break;
@@ -411,6 +455,7 @@ int main() {
 
         FlushBatchDraw();
 
+        // fix FPS
         DWORD end_time = GetTickCount();
         DWORD delta_time = end_time - start_time;
         if (delta_time < 1000 / FPS) {
